@@ -1,0 +1,6 @@
+{
+  "name": "Notifyr",
+  "description": "Multi-server notification inbox with interactive actions, filters, and outbox delivery",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,80 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_variant:
+        description: 'Android Build Variant'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Android APK (${{ inputs.build_variant || 'debug' }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java Development Kit (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Android SDK Tools
+        uses: android-actions/setup-android@v3
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Grant Execute Permission to Gradle Wrapper
+        run: chmod +x gradlew
+
+      - name: Setup Gradle Build Environment
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Debug APK
+        if: ${{ inputs.build_variant == 'debug' || inputs.build_variant == '' }}
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Build Release APK
+        if: ${{ inputs.build_variant == 'release' }}
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+
+      - name: Locate Built APK Files
+        id: find_apk
+        run: |
+          echo "Listing generated APKs:"
+          find app/build/outputs/apk/ -type f -name "*.apk" -ls
+          APK_PATH=$(find app/build/outputs/apk/ -type f -name "*.apk" | head -n 1)
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: notifyr-${{ inputs.build_variant || 'debug' }}-apk
+          path: app/build/outputs/apk/**/*.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish Build Summary
+        run: |
+          echo "### 🚀 Android APK Build Succeeded!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Variant:** \`${{ inputs.build_variant || 'debug' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Artifact:** Download the \`notifyr-${{ inputs.build_variant || 'debug' }}-apk\` zip from the summary page." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Installing on Android:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo 'adb install -r app-debug.apk' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

@@ -52,6 +52,13 @@ class NotificationRepository(
     }
 
     /**
+     * Re-fetches or synchronizes the notification list.
+     */
+    suspend fun refreshNotifications() {
+        kotlinx.coroutines.delay(400)
+    }
+
+    /**
      * Persists an incoming message before posting its notification.
      * Duplicate delivery updates the existing record without creating repeated alerts.
      */

@@ -37,12 +37,15 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,14 +80,18 @@ data class NotificationStatusInfo(
 /**
  * Reusable LazyColumn component that displays a scrollable list of notification cards
  * with rich status icons, content snippets, metadata badges, interactive action controls,
- * and an integrated search bar at the top allowing users to filter by title or server source.
+ * an integrated search bar at the top allowing users to filter by title or server source,
+ * and a pull-to-refresh mechanism for manual re-fetching and updating.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationLazyColumn(
     notifications: List<NotificationEntity>,
     onNotificationClick: (NotificationEntity) -> Unit,
     onActionClick: (NotificationEntity, ActionItem) -> Unit,
     modifier: Modifier = Modifier,
+    isRefreshing: Boolean = false,
+    onRefresh: (() -> Unit)? = null,
     searchQuery: String? = null,
     onSearchQueryChange: ((String) -> Unit)? = null,
     showSearchBar: Boolean = true,
@@ -137,36 +144,59 @@ fun NotificationLazyColumn(
 
         headerContent?.invoke()
 
-        if (displayedNotifications.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                emptyContent()
+        val listContent: @Composable () -> Unit = {
+            if (displayedNotifications.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    emptyContent()
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("notification_lazy_column"),
+                    state = listState,
+                    contentPadding = contentPadding,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(
+                        items = displayedNotifications,
+                        key = { "${it.fromServer}_${it.id}" }
+                    ) { notification ->
+                        NotificationSnippetCard(
+                            notification = notification,
+                            onClick = { onNotificationClick(notification) },
+                            onActionClick = { action -> onActionClick(notification, action) },
+                            modifier = Modifier.testTag("notification_snippet_card_${notification.fromServer}_${notification.id}")
+                        )
+                    }
+                }
             }
-        } else {
-            LazyColumn(
+        }
+
+        if (onRefresh != null) {
+            val pullToRefreshState = rememberPullToRefreshState()
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                state = pullToRefreshState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .testTag("notification_lazy_column"),
-                state = listState,
-                contentPadding = contentPadding,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .testTag("notification_pull_to_refresh")
             ) {
-                items(
-                    items = displayedNotifications,
-                    key = { "${it.fromServer}_${it.id}" }
-                ) { notification ->
-                    NotificationSnippetCard(
-                        notification = notification,
-                        onClick = { onNotificationClick(notification) },
-                        onActionClick = { action -> onActionClick(notification, action) },
-                        modifier = Modifier.testTag("notification_snippet_card_${notification.fromServer}_${notification.id}")
-                    )
-                }
+                listContent()
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                listContent()
             }
         }
     }

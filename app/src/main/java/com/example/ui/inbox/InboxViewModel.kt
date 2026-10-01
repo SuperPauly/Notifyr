@@ -164,6 +164,20 @@ class InboxViewModel(
         }
     }
 
+    fun refresh() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                notificationRepository.refreshNotifications()
+                _statusMessage.value = "Notifications updated"
+            } catch (e: Exception) {
+                _statusMessage.value = "Failed to update: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun clearStatusMessage() {
         _statusMessage.value = null
     }

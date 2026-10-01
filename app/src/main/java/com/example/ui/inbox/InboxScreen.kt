@@ -222,6 +222,8 @@ fun InboxScreen(
 
             NotificationLazyColumn(
                 notifications = uiState.notifications,
+                isRefreshing = uiState.isLoading,
+                onRefresh = { viewModel.refresh() },
                 searchQuery = uiState.searchQuery,
                 onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 searchPlaceholder = "Search by title or server source...",

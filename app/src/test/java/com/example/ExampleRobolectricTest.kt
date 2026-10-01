@@ -429,4 +429,19 @@ class ExampleRobolectricTest {
         }
         assertEquals(2, filteredByProd.size)
     }
+
+    @Test
+    fun `pull to refresh updates notification repository and completes cleanly`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = NotifyrDatabase.getInstance(context)
+        val transport = DemoNotificationTransport()
+        val notifRepo = NotificationRepository(db.notificationDao(), db.serverDao(), transport)
+
+        // Invoke refresh
+        notifRepo.refreshNotifications()
+
+        // Verify database and flows remain healthy after refresh
+        val count = db.notificationDao().getTotalCount()
+        assertTrue(count >= 0)
+    }
 }

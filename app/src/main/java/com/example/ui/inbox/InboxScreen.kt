@@ -214,117 +214,6 @@ fun InboxScreen(
                 }
             }
 
-            // Search Input Field
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                OutlinedTextField(
-                    value = uiState.searchQuery,
-                    onValueChange = { viewModel.setSearchQuery(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("inbox_search_input"),
-                    placeholder = { Text("Search by title, body, app, server...") },
-                    leadingIcon = {
-                        Icon(imageVector = Icons.Default.Search, contentDescription = null)
-                    },
-                    trailingIcon = {
-                        if (uiState.searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear search")
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.medium
-                )
-            }
-
-            // Horizontal Filter Chips Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Awaiting Response Toggle Chip
-                FilterChip(
-                    selected = uiState.onlyAwaitingResponse,
-                    onClick = { viewModel.toggleAwaitingResponse() },
-                    label = {
-                        Text(
-                            if (uiState.awaitingCount > 0) "Awaiting Response (${uiState.awaitingCount})"
-                            else "Awaiting Response"
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    modifier = Modifier.testTag("filter_awaiting_response")
-                )
-
-                // Unread Only Chip
-                FilterChip(
-                    selected = uiState.onlyUnread,
-                    onClick = { viewModel.toggleOnlyUnread() },
-                    label = { Text("Unread") },
-                    modifier = Modifier.testTag("filter_unread")
-                )
-
-                // Server Filter Chips
-                FilterChip(
-                    selected = uiState.selectedServerId == null,
-                    onClick = { viewModel.setSelectedServer(null) },
-                    label = { Text("All Servers") }
-                )
-
-                uiState.servers.forEach { server ->
-                    FilterChip(
-                        selected = uiState.selectedServerId == server.serverId,
-                        onClick = {
-                            if (uiState.selectedServerId == server.serverId) {
-                                viewModel.setSelectedServer(null)
-                            } else {
-                                viewModel.setSelectedServer(server.serverId)
-                            }
-                        },
-                        label = { Text(server.serverId) },
-                        modifier = Modifier.testTag("filter_server_${server.serverId}")
-                    )
-                }
-
-                // Application Filter Chips
-                if (uiState.availableApps.isNotEmpty()) {
-                    uiState.availableApps.forEach { appName ->
-                        FilterChip(
-                            selected = uiState.selectedApp == appName,
-                            onClick = {
-                                if (uiState.selectedApp == appName) {
-                                    viewModel.setSelectedApp(null)
-                                } else {
-                                    viewModel.setSelectedApp(appName)
-                                }
-                            },
-                            label = { Text(appName) },
-                            modifier = Modifier.testTag("filter_app_$appName")
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
             val isFiltered = uiState.searchQuery.isNotEmpty() ||
                     uiState.selectedServerId != null ||
                     uiState.selectedApp != null ||
@@ -333,6 +222,92 @@ fun InboxScreen(
 
             NotificationLazyColumn(
                 notifications = uiState.notifications,
+                searchQuery = uiState.searchQuery,
+                onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                searchPlaceholder = "Search by title or server source...",
+                searchTestTag = "inbox_search_input",
+                headerContent = {
+                    // Horizontal Filter Chips Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Awaiting Response Toggle Chip
+                        FilterChip(
+                            selected = uiState.onlyAwaitingResponse,
+                            onClick = { viewModel.toggleAwaitingResponse() },
+                            label = {
+                                Text(
+                                    if (uiState.awaitingCount > 0) "Awaiting Response (${uiState.awaitingCount})"
+                                    else "Awaiting Response"
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.FilterList,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            modifier = Modifier.testTag("filter_awaiting_response")
+                        )
+
+                        // Unread Only Chip
+                        FilterChip(
+                            selected = uiState.onlyUnread,
+                            onClick = { viewModel.toggleOnlyUnread() },
+                            label = { Text("Unread") },
+                            modifier = Modifier.testTag("filter_unread")
+                        )
+
+                        // Server Filter Chips
+                        FilterChip(
+                            selected = uiState.selectedServerId == null,
+                            onClick = { viewModel.setSelectedServer(null) },
+                            label = { Text("All Servers") }
+                        )
+
+                        uiState.servers.forEach { server ->
+                            FilterChip(
+                                selected = uiState.selectedServerId == server.serverId,
+                                onClick = {
+                                    if (uiState.selectedServerId == server.serverId) {
+                                        viewModel.setSelectedServer(null)
+                                    } else {
+                                        viewModel.setSelectedServer(server.serverId)
+                                    }
+                                },
+                                label = { Text(server.serverId) },
+                                modifier = Modifier.testTag("filter_server_${server.serverId}")
+                            )
+                        }
+
+                        // Application Filter Chips
+                        if (uiState.availableApps.isNotEmpty()) {
+                            uiState.availableApps.forEach { appName ->
+                                FilterChip(
+                                    selected = uiState.selectedApp == appName,
+                                    onClick = {
+                                        if (uiState.selectedApp == appName) {
+                                            viewModel.setSelectedApp(null)
+                                        } else {
+                                            viewModel.setSelectedApp(appName)
+                                        }
+                                    },
+                                    label = { Text(appName) },
+                                    modifier = Modifier.testTag("filter_app_$appName")
+                                )
+                            }
+                        }
+                    }
+                },
                 onNotificationClick = { notification ->
                     viewModel.markAsRead(notification.fromServer, notification.id, true)
                     onNavigateToDetail(notification.fromServer, notification.id)

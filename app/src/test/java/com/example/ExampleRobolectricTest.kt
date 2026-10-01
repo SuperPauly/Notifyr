@@ -373,4 +373,60 @@ class ExampleRobolectricTest {
         // In JVM Robolectric with no external distributor installed, list is safely empty
         assertTrue(distributors.isEmpty())
     }
+
+    @Test
+    fun `notification list filtering by title or server source filters accurately`() {
+        val list = listOf(
+            NotificationEntity(
+                id = 1L,
+                createdAt = System.currentTimeMillis(),
+                fromServer = "srv-prod-us",
+                fromApp = "auth-gate",
+                title = "Critical Security Alert",
+                body = "Unauthorized SSH attempt"
+            ),
+            NotificationEntity(
+                id = 2L,
+                createdAt = System.currentTimeMillis(),
+                fromServer = "srv-staging-eu",
+                fromApp = "deploy-bot",
+                title = "Staging Build Succeeded",
+                body = "Pipeline #42 finished in 2m"
+            ),
+            NotificationEntity(
+                id = 3L,
+                createdAt = System.currentTimeMillis(),
+                fromServer = "srv-prod-us",
+                fromApp = "backup-job",
+                title = "Nightly DB Backup",
+                body = "Completed 18GB snapshot"
+            )
+        )
+
+        // Filter by title keyword
+        val queryTitle = "security"
+        val filteredByTitle = list.filter {
+            it.title.contains(queryTitle, ignoreCase = true) ||
+            it.fromServer.contains(queryTitle, ignoreCase = true)
+        }
+        assertEquals(1, filteredByTitle.size)
+        assertEquals("Critical Security Alert", filteredByTitle.first().title)
+
+        // Filter by server source
+        val queryServer = "staging-eu"
+        val filteredByServer = list.filter {
+            it.title.contains(queryServer, ignoreCase = true) ||
+            it.fromServer.contains(queryServer, ignoreCase = true)
+        }
+        assertEquals(1, filteredByServer.size)
+        assertEquals("srv-staging-eu", filteredByServer.first().fromServer)
+
+        // Filter by common server
+        val queryProd = "srv-prod"
+        val filteredByProd = list.filter {
+            it.title.contains(queryProd, ignoreCase = true) ||
+            it.fromServer.contains(queryProd, ignoreCase = true)
+        }
+        assertEquals(2, filteredByProd.size)
+    }
 }

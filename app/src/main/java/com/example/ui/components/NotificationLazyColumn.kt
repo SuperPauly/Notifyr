@@ -24,12 +24,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -37,9 +39,16 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,7 +76,8 @@ data class NotificationStatusInfo(
 
 /**
  * Reusable LazyColumn component that displays a scrollable list of notification cards
- * with rich status icons, content snippets, metadata badges, and interactive action controls.
+ * with rich status icons, content snippets, metadata badges, interactive action controls,
+ * and an integrated search bar at the top allowing users to filter by title or server source.
  */
 @Composable
 fun NotificationLazyColumn(
@@ -75,42 +85,169 @@ fun NotificationLazyColumn(
     onNotificationClick: (NotificationEntity) -> Unit,
     onActionClick: (NotificationEntity, ActionItem) -> Unit,
     modifier: Modifier = Modifier,
+    searchQuery: String? = null,
+    onSearchQueryChange: ((String) -> Unit)? = null,
+    showSearchBar: Boolean = true,
+    searchPlaceholder: String = "Filter by title or server source...",
+    searchTestTag: String = "notification_search_input",
+    headerContent: (@Composable () -> Unit)? = null,
     listState: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
     emptyContent: @Composable () -> Unit = {
         EmptyStateView(
             icon = Icons.Default.NotificationsNone,
             title = "No Notifications",
-            message = "No notifications to display in this list."
+            message = "No notifications match your search or filters."
         )
     }
 ) {
-    if (notifications.isEmpty()) {
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            emptyContent()
+    var internalQuery by rememberSaveable { mutableStateOf("") }
+    val currentQuery = searchQuery ?: internalQuery
+    val onQueryChange: (String) -> Unit = onSearchQueryChange ?: { internalQuery = it }
+
+    val displayedNotifications = remember(notifications, currentQuery, onSearchQueryChange) {
+        if (onSearchQueryChange == null && currentQuery.isNotBlank()) {
+            val q = currentQuery.trim()
+            notifications.filter {
+                it.title.contains(q, ignoreCase = true) ||
+                it.fromServer.contains(q, ignoreCase = true)
+            }
+        } else {
+            notifications
         }
-    } else {
-        LazyColumn(
-            modifier = modifier
-                .fillMaxSize()
-                .testTag("notification_lazy_column"),
-            state = listState,
-            contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(
-                items = notifications,
-                key = { "${it.fromServer}_${it.id}" }
-            ) { notification ->
-                NotificationSnippetCard(
-                    notification = notification,
-                    onClick = { onNotificationClick(notification) },
-                    onActionClick = { action -> onActionClick(notification, action) },
-                    modifier = Modifier.testTag("notification_snippet_card_${notification.fromServer}_${notification.id}")
+    }
+
+    Column(
+        modifier = modifier.fillMaxSize()
+    ) {
+        if (showSearchBar) {
+            NotificationSearchBar(
+                query = currentQuery,
+                onQueryChange = onQueryChange,
+                placeholder = searchPlaceholder,
+                testTag = searchTestTag,
+                totalCount = notifications.size,
+                filteredCount = displayedNotifications.size,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .testTag("notification_search_bar")
+            )
+        }
+
+        headerContent?.invoke()
+
+        if (displayedNotifications.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                emptyContent()
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .testTag("notification_lazy_column"),
+                state = listState,
+                contentPadding = contentPadding,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(
+                    items = displayedNotifications,
+                    key = { "${it.fromServer}_${it.id}" }
+                ) { notification ->
+                    NotificationSnippetCard(
+                        notification = notification,
+                        onClick = { onNotificationClick(notification) },
+                        onActionClick = { action -> onActionClick(notification, action) },
+                        modifier = Modifier.testTag("notification_snippet_card_${notification.fromServer}_${notification.id}")
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Clean search bar component embedded at the top of the LazyColumn list,
+ * allowing instant filtering by notification title or server source.
+ */
+@Composable
+fun NotificationSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    testTag: String = "notification_search_input",
+    totalCount: Int = 0,
+    filteredCount: Int = 0
+) {
+    Column(modifier = modifier) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(testTag),
+            placeholder = {
+                Text(
+                    text = placeholder,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search notifications by title or server",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(
+                        onClick = { onQueryChange("") },
+                        modifier = Modifier.testTag("clear_search_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Clear search query"
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        if (query.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Filtering title/server: ",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "\"$query\"",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                if (totalCount > 0) {
+                    Text(
+                        text = " ($filteredCount of $totalCount)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

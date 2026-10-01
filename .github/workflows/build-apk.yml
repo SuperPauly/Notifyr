@@ -44,6 +44,29 @@ jobs:
       - name: Setup Gradle Build Environment
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Configure Keystore for Release Build
+        if: ${{ inputs.build_variant == 'release' }}
+        run: |
+          if [ ! -f "my-upload-key.jks" ] && [ -z "$KEYSTORE_PATH" ]; then
+            echo "Provisioning CI keystore for release packaging..."
+            keytool -genkeypair -v \
+              -keystore my-upload-key.jks \
+              -alias upload \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "${STORE_PASSWORD:-android}" \
+              -keypass "${KEY_PASSWORD:-android}" \
+              -dname "CN=Notifyr, OU=Release, O=Notifyr, L=Mountain View, ST=CA, C=US"
+            
+            if [ -z "$STORE_PASSWORD" ]; then
+              echo "STORE_PASSWORD=android" >> $GITHUB_ENV
+            fi
+            if [ -z "$KEY_PASSWORD" ]; then
+              echo "KEY_PASSWORD=android" >> $GITHUB_ENV
+            fi
+          fi
+
       - name: Build Debug APK
         if: ${{ inputs.build_variant == 'debug' || inputs.build_variant == '' }}
         run: ./gradlew assembleDebug --stacktrace --no-daemon

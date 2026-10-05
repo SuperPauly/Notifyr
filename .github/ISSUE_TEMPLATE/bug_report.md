@@ -1,4 +1,4 @@
-# Browser form; agents posting via CLI/API use .github/agent-issue-body.md.
+---
 name: Agent work package
 description: Self-contained context, acceptance, ISO 21502 traceability and parallel-agent handover.
 title: '[Work] component: outcome'
@@ -370,7 +370,7 @@ body:
     value: |-
       The author/coordinator records evidence for each item. An unchecked gate keeps
       implementation out of Ready; an investigation can explicitly authorise discovery.
-
+---
       - [ ] Objective, scope and exclusions are clear and justified.
       - [ ] Repository/baseline, instructions, evidence and access references are usable by a fresh agent.
       - [ ] Applicable obligations and tailoring have owners and planned evidence; exemptions are authorised.

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Trust the platform system CAs, forbid cleartext. No certificate pinning: the deployment
+  terminates TLS at a reverse proxy whose certificate/CA may rotate, so pinning would break
+  updates. A misconfigured http:// base URL fails closed instead of silently downgrading.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

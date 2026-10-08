@@ -22,7 +22,7 @@ class OutboxSyncWorker(
         val app = applicationContext as? NotifyrApplication ?: return@withContext Result.failure()
         val outboxDao = app.database.outboxDao()
         val serverDao = app.database.serverDao()
-        val transport = app.transport
+        val transport = app.responseTransport
 
         val pending = outboxDao.getPendingResponses()
         if (pending.isEmpty()) {

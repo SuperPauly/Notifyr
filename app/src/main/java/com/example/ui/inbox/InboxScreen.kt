@@ -19,12 +19,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
@@ -151,14 +151,14 @@ fun InboxScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.simulateNewNotification() },
-                modifier = Modifier.testTag("simulate_notification_fab"),
+                onClick = { viewModel.refresh() },
+                modifier = Modifier.testTag("refresh_notifications_fab"),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(
-                    imageVector = Icons.Default.AddAlert,
-                    contentDescription = "Simulate New Notification"
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh Notifications"
                 )
             }
         }
@@ -329,9 +329,9 @@ fun InboxScreen(
                         message = if (isFiltered) {
                             "Try adjusting your active filters or clear search query."
                         } else {
-                            "All notifications handled. Tap the + icon to simulate an incoming alert."
+                            "All notifications handled."
                         },
-                        actionLabel = if (isFiltered) "Reset Filters" else "Simulate Notification",
+                        actionLabel = if (isFiltered) "Reset Filters" else "Refresh",
                         onActionClick = {
                             if (isFiltered) {
                                 viewModel.setSearchQuery("")
@@ -340,7 +340,7 @@ fun InboxScreen(
                                 if (uiState.onlyAwaitingResponse) viewModel.toggleAwaitingResponse()
                                 if (uiState.onlyUnread) viewModel.toggleOnlyUnread()
                             } else {
-                                viewModel.simulateNewNotification()
+                                viewModel.refresh()
                             }
                         }
                     )

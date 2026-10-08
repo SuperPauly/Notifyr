@@ -70,4 +70,14 @@ class Converters {
             OutboxStatus.QUEUED
         }
     }
+
+    @TypeConverter
+    fun fromConnectionStatus(status: ConnectionStatus?): String {
+        return status?.name ?: ConnectionStatus.UNCONNECTED.name
+    }
+
+    @TypeConverter
+    fun toConnectionStatus(value: String?): ConnectionStatus {
+        return ConnectionStatus.entries.firstOrNull { it.name == value } ?: ConnectionStatus.UNCONNECTED
+    }
 }

@@ -46,9 +46,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -57,7 +55,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.data.repository.DemoNotificationType
 import com.example.data.repository.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -69,7 +66,6 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    var showReloadDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.statusMessage) {
         uiState.statusMessage?.let {
@@ -95,76 +91,6 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // System Notification Demo Suite
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.NotificationImportant,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "System Notification Simulator",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Posts live Android system notifications to your status bar and drawer. Test RemoteInput inline replies, interactive buttons, and auto-cancellation.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ElevatedButton(
-                            onClick = { viewModel.postSystemNotificationDemo(context, DemoNotificationType.ORDINARY) },
-                            modifier = Modifier.testTag("demo_post_ordinary")
-                        ) {
-                            Text("Ordinary Info")
-                        }
-
-                        ElevatedButton(
-                            onClick = { viewModel.postSystemNotificationDemo(context, DemoNotificationType.BUTTON_ACTION) },
-                            modifier = Modifier.testTag("demo_post_button")
-                        ) {
-                            Text("Button Actions")
-                        }
-
-                        Button(
-                            onClick = { viewModel.postSystemNotificationDemo(context, DemoNotificationType.TEXT_REPLY) },
-                            modifier = Modifier.testTag("demo_post_remote_input")
-                        ) {
-                            Text("RemoteInput Reply")
-                        }
-
-                        OutlinedButton(
-                            onClick = { viewModel.postSystemNotificationDemo(context, DemoNotificationType.EXPIRED) },
-                            modifier = Modifier.testTag("demo_post_expired")
-                        ) {
-                            Text("Expired Alert")
-                        }
-                    }
-                }
-            }
-
             // UnifiedPush Diagnostics Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -377,15 +303,6 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(
-                            onClick = { showReloadDialog = true },
-                            modifier = Modifier.testTag("reload_demo_data_btn")
-                        ) {
-                            Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Reload Demo Data")
-                        }
-
                         OutlinedButton(
                             onClick = { viewModel.cleanExpiredNow() }
                         ) {
@@ -438,29 +355,6 @@ fun SettingsScreen(
                 }
             }
         }
-    }
-
-    if (showReloadDialog) {
-        AlertDialog(
-            onDismissRequest = { showReloadDialog = false },
-            title = { Text("Reload Demo Data") },
-            text = { Text("This will reset all demo notifications from 'srv-prod-us' and 'srv-staging-eu'. Outbox history is preserved.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showReloadDialog = false
-                        viewModel.reloadDemoData()
-                    }
-                ) {
-                    Text("Reload")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showReloadDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 

@@ -153,17 +153,6 @@ class InboxViewModel(
         }
     }
 
-    fun simulateNewNotification() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val notif = notificationRepository.simulateIncomingNotification()
-            _isLoading.value = false
-            if (notif != null) {
-                _statusMessage.value = "New notification received: ${notif.title}"
-            }
-        }
-    }
-
     fun refresh() {
         viewModelScope.launch {
             _isLoading.value = true

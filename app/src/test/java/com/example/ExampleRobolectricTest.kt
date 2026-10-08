@@ -111,8 +111,7 @@ class ExampleRobolectricTest {
     fun `duplicate deliveries do not create duplicate alerts or outbox entries`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val db = NotifyrDatabase.getInstance(context)
-        val transport = DemoNotificationTransport()
-        val notifRepo = NotificationRepository(db.notificationDao(), db.serverDao(), transport)
+        val notifRepo = NotificationRepository(db.notificationDao(), db.serverDao())
         val outboxRepo = OutboxRepository(context, db.outboxDao(), db.notificationDao(), db.serverDao())
 
         val notif = NotificationEntity(
@@ -434,8 +433,7 @@ class ExampleRobolectricTest {
     fun `pull to refresh updates notification repository and completes cleanly`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val db = NotifyrDatabase.getInstance(context)
-        val transport = DemoNotificationTransport()
-        val notifRepo = NotificationRepository(db.notificationDao(), db.serverDao(), transport)
+        val notifRepo = NotificationRepository(db.notificationDao(), db.serverDao())
 
         // Invoke refresh
         notifRepo.refreshNotifications()

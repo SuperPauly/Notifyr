@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.data.repository.DemoNotificationType
 import com.example.data.repository.NotificationRepository
 import com.example.data.repository.PreferencesRepository
 import com.example.data.repository.ServerRepository
@@ -85,13 +84,6 @@ class SettingsViewModel(
         }
     }
 
-    fun postSystemNotificationDemo(context: Context, type: DemoNotificationType) {
-        viewModelScope.launch {
-            val notif = notificationRepository.postDemoNotification(context, type)
-            _statusMessage.value = "System notification posted: '${notif.title}'"
-        }
-    }
-
     fun simulateUnifiedPushDelivery(context: Context) {
         viewModelScope.launch {
             val firstServer = serverRepository.enabledServers.firstOrNull()?.firstOrNull()
@@ -126,13 +118,6 @@ class SettingsViewModel(
             } else {
                 _statusMessage.value = "Failed to decode push payload"
             }
-        }
-    }
-
-    fun reloadDemoData() {
-        viewModelScope.launch {
-            notificationRepository.reloadDemoData()
-            _statusMessage.value = "Demo notifications reloaded from 2 servers"
         }
     }
 

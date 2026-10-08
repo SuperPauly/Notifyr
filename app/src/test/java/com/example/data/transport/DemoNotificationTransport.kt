@@ -2,6 +2,7 @@ package com.example.data.transport
 
 import com.example.data.model.ActionItem
 import com.example.data.model.ActionKind
+import com.example.data.model.ConnectionStatus
 import com.example.data.model.NotificationEntity
 import com.example.data.model.OutboxEntity
 import com.example.data.model.ServerEntity
@@ -22,7 +23,7 @@ class DemoNotificationTransport : NotificationDeliveryTransport, NotificationRes
             encryptedAuthToken = com.example.data.security.KeystoreManager().encrypt("tok_prod_sec_9941a87e2b"),
             colorHex = 0xFF4F46E5, // Indigo
             isEnabled = true,
-            connectionStatus = "Connected"
+            connectionStatus = ConnectionStatus.CONNECTED
         ),
         ServerEntity(
             connectionId = "conn-staging-eu",
@@ -33,7 +34,7 @@ class DemoNotificationTransport : NotificationDeliveryTransport, NotificationRes
             encryptedAuthToken = com.example.data.security.KeystoreManager().encrypt("tok_stg_dev_33890c21"),
             colorHex = 0xFF059669, // Emerald
             isEnabled = true,
-            connectionStatus = "Connected"
+            connectionStatus = ConnectionStatus.CONNECTED
         )
     )
 

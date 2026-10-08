@@ -117,13 +117,9 @@ class ServersViewModel(
     fun testConnection(server: ServerEntity) {
         viewModelScope.launch {
             _testingServerId.value = server.connectionId
-            val result = serverRepository.testConnection(server)
+            val status = serverRepository.testConnection(server)
             _testingServerId.value = null
-            _feedbackMessage.value = if (result.isSuccess) {
-                "${server.displayName}: ${result.getOrNull()}"
-            } else {
-                "${server.displayName}: ${result.exceptionOrNull()?.message}"
-            }
+            _feedbackMessage.value = "${server.displayName}: ${status.name}"
         }
     }
 

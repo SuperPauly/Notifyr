@@ -1,15 +1,26 @@
 package com.example.data.repository
 
 import com.example.data.local.ServerDao
+import com.example.data.model.ConnectionStatus
 import com.example.data.model.ServerEntity
+import com.example.data.remote.ConnectionStateEvaluator
+import com.example.data.remote.MeClient
+import com.example.data.remote.MeError
+import com.example.data.remote.MeResult
+import com.example.data.remote.ServerInfoClient
+import com.example.data.remote.ServerInfoResult
 import com.example.data.security.KeystoreManager
-import com.example.data.transport.DemoNotificationTransport
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
+import okhttp3.Call
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
 
 class ServerRepository(
     private val serverDao: ServerDao,
-    private val transport: DemoNotificationTransport,
-    private val keystoreManager: KeystoreManager = KeystoreManager()
+    private val keystoreManager: KeystoreManager = KeystoreManager(),
+    private val callFactory: Call.Factory = OkHttpClient()
 ) {
     val allServers: Flow<List<ServerEntity>> = serverDao.getAllServers()
     val enabledServers: Flow<List<ServerEntity>> = serverDao.getEnabledServers()
@@ -24,12 +35,6 @@ class ServerRepository(
 
     suspend fun getServerByConnectionIdDirect(connectionId: String): ServerEntity? =
         serverDao.getServerByConnectionIdDirect(connectionId)
-
-    suspend fun ensureDefaultServers() {
-        if (serverDao.getServerCount() == 0) {
-            serverDao.insertServers(transport.defaultServers)
-        }
-    }
 
     suspend fun addServer(
         connectionId: String,
@@ -51,7 +56,7 @@ class ServerRepository(
             encryptedAuthToken = encryptedToken,
             colorHex = colorHex,
             isEnabled = isEnabled,
-            connectionStatus = "Unconnected",
+            connectionStatus = ConnectionStatus.UNCONNECTED,
             lastSyncTime = System.currentTimeMillis()
         )
         serverDao.insertServer(server)
@@ -65,23 +70,34 @@ class ServerRepository(
         serverDao.deleteServerByConnectionId(connectionId)
     }
 
-    suspend fun testConnection(server: ServerEntity): Result<String> {
-        val res = transport.testConnection(server)
-        if (res.isSuccess) {
-            serverDao.updateConnectionStatus(
-                connectionId = server.connectionId,
-                timestamp = System.currentTimeMillis(),
-                status = "Connected (OK)"
-            )
-        } else {
-            val errMsg = res.exceptionOrNull()?.message ?: "Unreachable"
-            serverDao.updateConnectionStatus(
-                connectionId = server.connectionId,
-                timestamp = System.currentTimeMillis(),
-                status = "Connection Failed: $errMsg"
-            )
+    /**
+     * Probes the server for real: unauthenticated `/v1/server-info`, then bearer `/v1/me`.
+     * [ConnectionStatus.CONNECTED] is only ever produced when both probes succeed.
+     */
+    suspend fun testConnection(server: ServerEntity): ConnectionStatus = withContext(Dispatchers.IO) {
+        val status = probe(server)
+        serverDao.updateConnectionStatus(
+            connectionId = server.connectionId,
+            timestamp = System.currentTimeMillis(),
+            status = status.name
+        )
+        status
+    }
+
+    private fun probe(server: ServerEntity): ConnectionStatus {
+        val baseUrl = server.baseUrl.toHttpUrlOrNull()?.toString()
+            ?: return ConnectionStatus.UNREACHABLE
+        val info = ServerInfoClient(callFactory, baseUrl).fetch()
+        if (info !is ServerInfoResult.Success) {
+            return ConnectionStateEvaluator.evaluate(info, MeResult.Failure(MeError.UNREACHABLE, "not probed"))
         }
-        return res
+        val token = keystoreManager.decrypt(server.encryptedAuthToken)
+        val me = if (token.isNullOrBlank()) {
+            MeResult.Failure(MeError.AUTH_REQUIRED, "No credential configured")
+        } else {
+            MeClient(callFactory, baseUrl).fetch(token)
+        }
+        return ConnectionStateEvaluator.evaluate(info, me)
     }
 
     fun hasEncryptedToken(server: ServerEntity): Boolean {

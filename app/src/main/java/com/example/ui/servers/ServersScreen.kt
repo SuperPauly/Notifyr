@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.ConnectionStatus
 import com.example.data.model.ServerEntity
 import com.example.data.unifiedpush.DistributorInfo
 import com.example.ui.components.DateTimeUtils
@@ -288,9 +289,9 @@ fun ServerProfileCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Status: ${server.connectionStatus}",
+                    text = "Status: ${server.connectionStatus.name}",
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (server.connectionStatus.contains("Connected")) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                    color = if (server.connectionStatus == ConnectionStatus.CONNECTED) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
                 )
                 Text(
                     text = "Checked: ${DateTimeUtils.formatRelative(server.lastSyncTime)}",

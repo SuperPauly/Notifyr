@@ -69,17 +69,34 @@ class OutboxSyncWorker(
 
             val deliveryResult = transport.deliverResponse(server, item)
             if (deliveryResult.isSuccess) {
-                val finalStatus = if (item.isSimulated) OutboxStatus.SIMULATED else OutboxStatus.SENT
-                outboxDao.updateStatus(
-                    responseId = item.responseId,
-                    status = finalStatus,
-                    updatedAt = System.currentTimeMillis(),
-                    errorMessage = null
-                )
+                val receipt = deliveryResult.getOrNull()
+                if (item.isSimulated) {
+                    outboxDao.updateStatus(
+                        responseId = item.responseId,
+                        status = OutboxStatus.SIMULATED,
+                        updatedAt = now,
+                        errorMessage = null
+                    )
+                } else if (receipt != null) {
+                    outboxDao.recordReceipt(
+                        responseId = item.responseId,
+                        receiptResponseId = receipt.responseId,
+                        receiptAcceptedAt = java.time.Instant.parse(receipt.acceptedAt).toEpochMilli(),
+                        now = now
+                    )
+                } else {
+                    outboxDao.updateStatus(
+                        responseId = item.responseId,
+                        status = OutboxStatus.SENT,
+                        updatedAt = now,
+                        errorMessage = null
+                    )
+                }
             } else {
                 val exception = deliveryResult.exceptionOrNull()
-                val httpCode = (exception as? ResponseDeliveryException)?.code ?: 0
-                val classification = ErrorClassifier.classify(httpCode, null)
+                val deliveryException = exception as? ResponseDeliveryException
+                val httpCode = deliveryException?.code ?: 0
+                val classification = ErrorClassifier.classify(httpCode, deliveryException?.response)
 
                 if (classification.isTerminal) {
                     outboxDao.updateStatus(

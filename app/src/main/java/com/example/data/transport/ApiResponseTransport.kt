@@ -27,7 +27,7 @@ class ApiResponseTransport(
     override suspend fun deliverResponse(
         server: ServerEntity,
         response: OutboxEntity
-    ): Result<Unit> {
+    ): Result<com.example.data.remote.model.ResponseReceiptDto?> {
         // Validate wire format before sending
         val wireFormat = ResponseSerializer.serializeResponse(
             actionId = response.actionId,
@@ -44,7 +44,7 @@ class ApiResponseTransport(
             baseClient = callFactory
         )
         return try {
-            val result: Response<*> = api.respond(
+            val result = api.respond(
                 RespondRequestDto(
                     responseId = response.responseId,
                     notificationId = response.notificationId.toString(),
@@ -54,9 +54,9 @@ class ApiResponseTransport(
                 )
             )
             if (result.isSuccessful) {
-                Result.success(Unit)
+                Result.success(result.body())
             } else {
-                Result.failure(ResponseDeliveryException(result.code()))
+                Result.failure(ResponseDeliveryException(result.code(), result))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -65,6 +65,10 @@ class ApiResponseTransport(
 }
 
 /** Non-2xx delivery outcome; [code] distinguishes terminal 4xx from retryable 5xx. */
-class ResponseDeliveryException(val code: Int, message: String = "HTTP $code") : Exception(message) {
+class ResponseDeliveryException(
+    val code: Int,
+    val response: Response<*>? = null,
+    message: String = "HTTP $code"
+) : Exception(message) {
     val isRetryable: Boolean get() = code >= 500
 }

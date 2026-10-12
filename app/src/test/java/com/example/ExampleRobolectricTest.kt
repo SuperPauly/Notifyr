@@ -14,6 +14,7 @@ import com.example.data.repository.NotificationRepository
 import com.example.data.repository.OutboxRepository
 import com.example.data.security.KeystoreManager
 import com.example.data.transport.DemoNotificationTransport
+import com.example.data.unifiedpush.DecodeResult
 import com.example.data.unifiedpush.UnifiedPushPayloadDecoder
 import com.example.ui.notifications.NotificationHelper
 import kotlinx.coroutines.runBlocking
@@ -269,13 +270,23 @@ class ExampleRobolectricTest {
 
         val validJson = """
             {
-                "id": 999,
-                "title": "Alert 999",
-                "body": "Test message body",
-                "from_app": "auth-service",
-                "actions": [
-                    {"id": "act_1", "label": "Approve", "kind": "BUTTON"}
-                ]
+                "version": 1,
+                "revision": "999",
+                "kind": "notification",
+                "from_server": "srv-prod-us",
+                "state": {
+                    "notification": {
+                        "id": "999",
+                        "title": "Alert 999",
+                        "body": "Test message body",
+                        "from_app": "auth-service",
+                        "created_at": "2025-03-01T12:00:00Z",
+                        "actions": [
+                            {"id": "act_1", "label": "Approve", "kind": "BUTTON"}
+                        ]
+                    },
+                    "responded": false
+                }
             }
         """.trimIndent()
 
@@ -285,20 +296,30 @@ class ExampleRobolectricTest {
             server = dummyServer
         )
 
-        assertNotNull(decoded)
-        assertEquals(999L, decoded?.id)
-        assertEquals("srv-prod-us", decoded?.fromServer)
-        assertEquals("Alert 999", decoded?.title)
-        assertEquals(1, decoded?.actions?.size)
+        assertTrue(decoded is DecodeResult.Notification)
+        decoded as DecodeResult.Notification
+        assertEquals("999", decoded.state.notification.id)
+        assertEquals("srv-prod-us", decoded.fromServer)
+        assertEquals("conn-123", decoded.connectionId)
+        assertEquals("Alert 999", decoded.state.notification.title)
+        assertEquals(1, decoded.state.notification.actions.size)
 
-        // Invalid negative ID or broken json should return null safely without throwing
-        val invalidJson = "{\"id\": -1, \"title\": \"Broken\"}"
-        val broken = UnifiedPushPayloadDecoder.decodePayload(
+        // A payload for a different server must be ignored, never bound to this connection.
+        val foreignJson = validJson.replace("srv-prod-us", "srv-eu-west")
+        val foreign = UnifiedPushPayloadDecoder.decodePayload(
             rawBytes = null,
-            rawString = invalidJson,
+            rawString = foreignJson,
             server = dummyServer
         )
-        assertNull(broken)
+        assertEquals(DecodeResult.Ignored(DecodeResult.Reason.SERVER_MISMATCH), foreign)
+
+        // Broken json is ignored safely without throwing.
+        val broken = UnifiedPushPayloadDecoder.decodePayload(
+            rawBytes = null,
+            rawString = "not json",
+            server = dummyServer
+        )
+        assertEquals(DecodeResult.Ignored(DecodeResult.Reason.NOT_JSON), broken)
     }
 
     @Test

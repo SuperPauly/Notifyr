@@ -14,7 +14,6 @@ import org.unifiedpush.android.connector.FailedReason
 import org.unifiedpush.android.connector.PushService
 import org.unifiedpush.android.connector.data.PushEndpoint
 import org.unifiedpush.android.connector.data.PushMessage
-import java.util.UUID
 
 /**
  * Connector-backed UnifiedPush endpoint. The connector binds each callback to the `instance`
@@ -107,8 +106,8 @@ class NotifyrPushService : PushService() {
     ) {
         val serverDao = app.database.serverDao()
         val server = serverDao.getServerByConnectionIdDirect(instance) ?: return
-        val installationId = server.installationId ?: UUID.randomUUID().toString()
         val keyStore = KeyMaterialStore(app)
+        val installationId = server.installationId ?: keyStore.installationId(instance)
         if (!keyStore.storeKeyMaterial(instance, pubKey, auth)) return
 
         serverDao.updateUnifiedPushState(

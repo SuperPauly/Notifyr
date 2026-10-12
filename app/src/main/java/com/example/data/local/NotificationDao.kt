@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.example.data.model.NotificationEntity
 import kotlinx.coroutines.flow.Flow
@@ -77,4 +78,34 @@ interface NotificationDao {
 
     @Query("SELECT COUNT(*) FROM notifications")
     suspend fun getTotalCount(): Int
+
+    /**
+     * Highest stored revision for one server, compared as a zero-padded-ish decimal string.
+     * Returns null when the server has no rows. `revision` values are fixed-width decimal
+     * strings from the server, so lexicographic MAX equals numeric MAX; the Kotlin-side
+     * comparator in [com.example.data.repository.InboxRepository] is authoritative.
+     */
+    @Query("SELECT MAX(revision) FROM notifications WHERE from_server = :serverId")
+    suspend fun highestRevision(serverId: String): String?
+
+    @Query("SELECT revision FROM notifications WHERE from_server = :serverId AND id = :id LIMIT 1")
+    suspend fun revisionOf(serverId: String, id: Long): String?
+
+    /**
+     * Writes one inbox page and advances the connection cursor in a single transaction.
+     * If any write throws, both the page and the cursor roll back together. A null
+     * [connectionId] writes the page without touching any cursor.
+     */
+    @Transaction
+    suspend fun applyPageAndAdvanceCursor(
+        connectionId: String?,
+        items: List<NotificationEntity>,
+        cursor: String
+    ) {
+        insertNotifications(items)
+        if (connectionId != null) updateCursor(connectionId, cursor)
+    }
+
+    @Query("UPDATE servers SET inbox_cursor = :cursor WHERE connection_id = :connectionId")
+    suspend fun updateCursor(connectionId: String, cursor: String)
 }

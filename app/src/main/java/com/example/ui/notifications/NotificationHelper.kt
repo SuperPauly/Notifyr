@@ -65,7 +65,6 @@ object NotificationHelper {
         connectionId: String = notification.fromServer
     ) {
         createNotificationChannels(context)
-
         val channelId = if (notification.actions.isNotEmpty() && !notification.isExpired) {
             CHANNEL_ALERTS_ID
         } else {
@@ -193,6 +192,33 @@ object NotificationHelper {
 
     fun getNotificationTag(fromServer: String, id: Long): String {
         return "${fromServer}_$id"
+    }
+
+    /**
+     * Posts a plain informational notification with no actions. Used to satisfy the
+     * UnifiedPush `userVisibleOnly` contract for registration challenges, which have no
+     * interactive controls.
+     */
+    fun postVisibleMessage(
+        context: Context,
+        title: String,
+        body: String,
+        tag: String
+    ) {
+        createNotificationChannels(context)
+        val builder = NotificationCompat.Builder(context, CHANNEL_INFO_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+        try {
+            NotificationManagerCompat.from(context).notify(tag, tag.hashCode() and 0x7FFFFFFF, builder.build())
+        } catch (_: SecurityException) {
+            // POST_NOTIFICATIONS not granted; nothing else to do.
+        }
     }
 
     fun getNotificationId(fromServer: String, id: Long): Int {

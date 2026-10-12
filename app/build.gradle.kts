@@ -30,12 +30,6 @@ android {
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
     }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
   }
 
   buildTypes {
@@ -45,7 +39,6 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -60,6 +53,15 @@ android {
     includeInApk = false
     includeInBundle = true
   }
+}
+
+configurations.configureEach {
+  exclude(group = "com.google.crypto.tink", module = "tink-android")
+}
+
+ksp {
+  arg("room.schemaLocation", "$projectDir/schemas")
+  arg("room.generateKotlin", "false")
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
@@ -98,6 +100,7 @@ dependencies {
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.work.runtime.ktx)
+  implementation(libs.unifiedpush.connector)
   // implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
@@ -122,6 +125,8 @@ dependencies {
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
+  testImplementation(libs.androidx.room.testing)
+  testImplementation(libs.androidx.work.testing)
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.robolectric)

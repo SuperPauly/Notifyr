@@ -53,5 +53,22 @@ data class OutboxEntity(
     val updatedAt: Long = System.currentTimeMillis(),
 
     @ColumnInfo(name = "error_message")
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+
+    // --- Delivery receipt (populated from POST /v1/responses ResponseReceipt) ---
+    @ColumnInfo(name = "receipt_response_id")
+    val receiptResponseId: String? = null,
+
+    @ColumnInfo(name = "receipt_accepted_at")
+    val receiptAcceptedAt: Long? = null, // epoch millis, converted at the storage boundary
+
+    // --- Bounded retry bookkeeping ---
+    @ColumnInfo(name = "attempt_count", defaultValue = "0")
+    val attemptCount: Int = 0,
+
+    @ColumnInfo(name = "next_attempt_at")
+    val nextAttemptAt: Long? = null, // epoch millis; null means eligible immediately
+
+    @ColumnInfo(name = "terminal_error_code")
+    val terminalErrorCode: String? = null // stable server code for a permanent failure
 )

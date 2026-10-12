@@ -1,10 +1,10 @@
 package com.example.data.unifiedpush
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import com.example.data.model.ServerEntity
+import com.example.data.transport.InboxTransport
+import com.example.ui.notifications.NotificationHelper
+import org.unifiedpush.android.connector.UnifiedPush
 
 data class DistributorInfo(
     val packageName: String,
@@ -12,58 +12,97 @@ data class DistributorInfo(
     val isInstalled: Boolean = true
 )
 
-class UnifiedPushManager(private val context: Context) {
+class UnifiedPushManager(
+    private val context: Context,
+    private val inboxTransport: InboxTransport? = null
+) {
 
     /**
-     * Discovers all installed push distributors that respond to the UnifiedPush REGISTER broadcast.
+     * Discovers all installed push distributors through the connector's own resolver.
      */
-    fun discoverDistributors(): List<DistributorInfo> {
-        val packageManager = context.packageManager
-        val registerIntent = Intent(UnifiedPushConstants.ACTION_REGISTER)
-
-        val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.queryBroadcastReceivers(
-                registerIntent,
-                PackageManager.ResolveInfoFlags.of(0L)
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            packageManager.queryBroadcastReceivers(registerIntent, 0)
-        }
-
-        val list = mutableListOf<DistributorInfo>()
-        for (info in resolveInfos) {
-            val pkg = info.activityInfo.packageName
-            val label = info.loadLabel(packageManager).toString()
-            if (pkg != context.packageName) {
-                list.add(DistributorInfo(packageName = pkg, appName = label))
-            }
-        }
-        return list
-    }
+    fun discoverDistributors(): List<DistributorInfo> =
+        UnifiedPush.getDistributors(context)
+            .filter { it != context.packageName }
+            .map { pkg -> DistributorInfo(packageName = pkg, appName = appLabel(pkg)) }
 
     /**
-     * Registers a server profile with a selected distributor using its unique connectionId token.
+     * Registers [server.connectionId] as the connector instance. The connectionId is the token
+     * that binds every subsequent distributor callback back to this server profile.
      */
     fun register(server: ServerEntity, distributorPackage: String) {
-        val registerIntent = Intent(UnifiedPushConstants.ACTION_REGISTER).apply {
-            `package` = distributorPackage
-            putExtra(UnifiedPushConstants.EXTRA_APPLICATION, context.packageName)
-            putExtra(UnifiedPushConstants.EXTRA_TOKEN, server.connectionId)
-        }
-        context.sendBroadcast(registerIntent)
+        UnifiedPush.saveDistributor(context, distributorPackage)
+        registerInstance(server, server.vapidPublicKey)
     }
 
-    /**
-     * Unregisters a server connection from its current distributor.
-     */
+    /** Re-registers an already-configured instance, e.g. after the endpoint went temporarily away. */
+    fun reRegister(server: ServerEntity) {
+        registerInstance(server, server.vapidPublicKey)
+    }
+
+    /** Unregisters the server's connector instance from its saved distributor. */
     fun unregister(server: ServerEntity) {
-        val distributorPackage = server.upDistributor ?: return
-        val unregisterIntent = Intent(UnifiedPushConstants.ACTION_UNREGISTER).apply {
-            `package` = distributorPackage
-            putExtra(UnifiedPushConstants.EXTRA_APPLICATION, context.packageName)
-            putExtra(UnifiedPushConstants.EXTRA_TOKEN, server.connectionId)
+        UnifiedPush.unregister(context, server.connectionId)
+        KeyMaterialStore(context).clearKeyMaterial(server.connectionId)
+    }
+
+    private fun registerInstance(server: ServerEntity, vapid: String?) {
+        val messageForDistributor = server.displayName.ifBlank { server.serverId }
+        try {
+            UnifiedPush.register(
+                context = context,
+                instance = server.connectionId,
+                messageForDistributor = messageForDistributor,
+                vapid = vapid
+            )
+        } catch (_: UnifiedPush.VapidNotValidException) {
+            // The stored VAPID key is not a valid base64url uncompressed P-256 point; register
+            // without it rather than crash, and let the distributor decide whether it is required.
+            UnifiedPush.register(
+                context = context,
+                instance = server.connectionId,
+                messageForDistributor = messageForDistributor,
+                vapid = null
+            )
         }
-        context.sendBroadcast(unregisterIntent)
+    }
+
+    private fun appLabel(packageName: String): String = runCatching {
+        val info = context.packageManager.getApplicationInfo(packageName, 0)
+        context.packageManager.getApplicationLabel(info).toString()
+    }.getOrDefault(packageName)
+
+    /**
+     * Handles a `registration_challenge` envelope. The visible notification is posted first and
+     * synchronously, because the UnifiedPush `userVisibleOnly` contract requires every received
+     * message to surface a user-visible notification; the server confirmation follows.
+     */
+    suspend fun handleRegistrationChallenge(
+        server: ServerEntity,
+        challenge: DecodeResult.RegistrationChallenge
+    ): Boolean {
+        if (challenge.installationId != server.installationId ||
+            challenge.subscriptionVersion != server.subscriptionVersion ||
+            server.subscriptionStatus == "active"
+        ) return false
+
+        NotificationHelper.postVisibleMessage(
+            context = context,
+            title = challenge.visibleTitle,
+            body = challenge.visibleBody,
+            tag = "up_challenge_${challenge.installationId}"
+        )
+        val confirmed = inboxTransport?.confirmSubscription(
+            server = server,
+            installationId = challenge.installationId,
+            version = challenge.subscriptionVersion,
+            challenge = challenge.challenge
+        ) ?: false
+        if (confirmed) {
+            val app = context.applicationContext as? com.example.NotifyrApplication ?: return false
+            app.database.serverDao().updateServer(
+                server.copy(subscriptionStatus = "active")
+            )
+        }
+        return confirmed
     }
 }

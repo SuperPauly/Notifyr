@@ -279,7 +279,8 @@ fun NotifyrMainApp(
                         app.preferencesRepository,
                         app.notificationRepository,
                         app.serverRepository,
-                        app.unifiedPushManager
+                        app.unifiedPushManager,
+                        app.inboxRepository
                     )
                 )
                 SettingsScreen(viewModel = settingsViewModel)

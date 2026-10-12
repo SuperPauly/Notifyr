@@ -10,6 +10,8 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.example.NotifyrApplication
 import com.example.data.model.OutboxStatus
+import com.example.data.response.ErrorClassifier
+import com.example.data.transport.ResponseDeliveryException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -33,14 +35,17 @@ class OutboxSyncWorker(
 
         for (item in pending) {
             val now = System.currentTimeMillis()
+            
+            if (item.nextAttemptAt != null && item.nextAttemptAt > now) {
+                continue
+            }
+
             outboxDao.updateStatus(item.responseId, OutboxStatus.SENDING, now)
 
-            // Look up server by connectionId first, then by serverId
             val server = serverDao.getServerByConnectionIdDirect(item.connectionId)
                 ?: serverDao.getServerByServerIdDirect(item.fromServer)
 
             if (server == null) {
-                // Server profile removed or not found
                 outboxDao.updateStatus(
                     responseId = item.responseId,
                     status = OutboxStatus.FAILED,
@@ -72,17 +77,36 @@ class OutboxSyncWorker(
                     errorMessage = null
                 )
             } else {
-                outboxDao.updateStatus(
-                    responseId = item.responseId,
-                    status = OutboxStatus.FAILED,
-                    updatedAt = System.currentTimeMillis(),
-                    errorMessage = deliveryResult.exceptionOrNull()?.message ?: "Transmission rejected"
-                )
-                anyFailed = true
+                val exception = deliveryResult.exceptionOrNull()
+                val httpCode = (exception as? ResponseDeliveryException)?.code ?: 0
+                val classification = ErrorClassifier.classify(httpCode, null)
+
+                if (classification.isTerminal) {
+                    outboxDao.updateStatus(
+                        responseId = item.responseId,
+                        status = OutboxStatus.FAILED,
+                        updatedAt = System.currentTimeMillis(),
+                        errorMessage = exception?.message ?: "Transmission rejected"
+                    )
+                    outboxDao.setTerminalError(item.responseId, classification.errorCode ?: "unknown", now)
+                } else if (classification.isRetryable) {
+                    val attemptCount = (item.attemptCount ?: 0) + 1
+                    val backoffMs = ErrorClassifier.calculateBackoff(attemptCount, classification.retryAfterMs)
+                    val nextAttempt = now + backoffMs
+
+                    outboxDao.scheduleRetry(
+                        responseId = item.responseId,
+                        attemptCount = attemptCount,
+                        nextAttemptAt = nextAttempt,
+                        errorMessage = exception?.message,
+                        now = now
+                    )
+                    anyFailed = true
+                }
             }
         }
 
-        if (anyFailed && runAttemptCount < 3) {
+        if (anyFailed) {
             Result.retry()
         } else {
             Result.success()
@@ -108,7 +132,6 @@ class OutboxSyncWorker(
                     workRequest
                 )
             } catch (_: Exception) {
-                // Graceful fallback for JVM test environments where WorkManager is not initialized
             }
         }
     }

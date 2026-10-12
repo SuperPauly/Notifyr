@@ -4,6 +4,7 @@ import com.example.data.model.OutboxEntity
 import com.example.data.model.ServerEntity
 import com.example.data.remote.ApiFactory
 import com.example.data.remote.model.RespondRequestDto
+import com.example.data.response.ResponseSerializer
 import com.example.data.security.KeystoreManager
 import okhttp3.OkHttpClient
 import retrofit2.Response
@@ -27,6 +28,15 @@ class ApiResponseTransport(
         server: ServerEntity,
         response: OutboxEntity
     ): Result<Unit> {
+        // Validate wire format before sending
+        val wireFormat = ResponseSerializer.serializeResponse(
+            actionId = response.actionId,
+            actionKind = response.actionKind,
+            replyText = response.replyText
+        ) ?: return Result.failure(
+            IllegalArgumentException("Invalid response format: action_id=${response.actionId}, kind=${response.actionKind}")
+        )
+
         val token = keystoreManager.decrypt(server.encryptedAuthToken)
         val api = ApiFactory.create(
             baseUrl = server.baseUrl,
@@ -38,8 +48,8 @@ class ApiResponseTransport(
                 RespondRequestDto(
                     responseId = response.responseId,
                     notificationId = response.notificationId.toString(),
-                    actionId = response.actionId,
-                    text = response.replyText,
+                    actionId = wireFormat["action_id"] as String,
+                    text = wireFormat["text"] as? String,
                     fromServer = response.fromServer
                 )
             )

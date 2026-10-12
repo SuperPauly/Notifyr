@@ -42,6 +42,8 @@ interface InboxTransport {
     ): NotificationFetchResult
 
     /** Answers a registration challenge: `POST /v1/subscriptions/{id}/confirm`. */
+    suspend fun deleteSubscription(server: ServerEntity): Boolean
+
     suspend fun confirmSubscription(
         server: ServerEntity,
         installationId: String,
@@ -110,6 +112,16 @@ class ApiInboxTransport(
             }
         } catch (e: Exception) {
             NotificationFetchResult(state = null, notFound = false, error = e)
+        }
+    }
+
+    override suspend fun deleteSubscription(server: ServerEntity): Boolean {
+        val installationId = server.installationId ?: return false
+        return try {
+            val response = apiFor(server).deleteSubscription(installationId)
+            response.isSuccessful
+        } catch (e: Exception) {
+            false
         }
     }
 

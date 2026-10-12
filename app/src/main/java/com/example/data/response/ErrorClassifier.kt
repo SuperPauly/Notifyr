@@ -63,6 +63,12 @@ object ErrorClassifier {
                 errorCode = "server_error",
                 retryAfterMs = retryAfter
             )
+            0 -> Classification(
+                isRetryable = true,
+                isTerminal = false,
+                errorCode = "network_error",
+                retryAfterMs = null
+            )
             else -> Classification(
                 isRetryable = false,
                 isTerminal = true,

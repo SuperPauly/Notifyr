@@ -16,7 +16,7 @@ import com.example.data.model.ServerEntity
         ServerEntity::class,
         OutboxEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -37,7 +37,7 @@ abstract class NotifyrDatabase : RoomDatabase() {
                     NotifyrDatabase::class.java,
                     "notifyr_database"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .fallbackToDestructiveMigration(false)
                     .build()
                 INSTANCE = instance

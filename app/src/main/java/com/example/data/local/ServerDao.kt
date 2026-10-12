@@ -54,12 +54,10 @@ interface ServerDao {
     @Query("UPDATE servers SET up_distributor = :distributor, up_endpoint = :endpoint, up_status = :status WHERE connection_id = :connectionId")
     suspend fun updateUnifiedPushState(connectionId: String, distributor: String?, endpoint: String?, status: String)
 
-    @Query("UPDATE servers SET installation_id = :installationId, subscription_p256dh = :p256dh, subscription_auth = :auth, connector_package = :distributor, up_distributor = :distributor, up_endpoint = :endpoint, subscription_version = :version, subscription_status = :subscriptionStatus, up_status = :status WHERE connection_id = :connectionId")
+    @Query("UPDATE servers SET installation_id = :installationId, connector_package = :distributor, up_distributor = :distributor, up_endpoint = :endpoint, subscription_version = :version, subscription_status = :subscriptionStatus, up_status = :status WHERE connection_id = :connectionId")
     suspend fun updateSubscriptionState(
         connectionId: String,
         installationId: String,
-        p256dh: String,
-        auth: String,
         distributor: String,
         endpoint: String,
         version: Int?,

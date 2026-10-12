@@ -1,0 +1,429 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "3445b9fead32ee15ff98bac26bb1fed0",
+    "entities": [
+      {
+        "tableName": "notifications",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `from_server` TEXT NOT NULL, `from_app` TEXT NOT NULL, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `actions` TEXT NOT NULL, `expires_at` INTEGER, `open_path` TEXT, `is_read` INTEGER NOT NULL, `is_responded` INTEGER NOT NULL, `responded_action_id` TEXT, `responded_text` TEXT, `responded_at` INTEGER, `revision` TEXT NOT NULL DEFAULT '0', PRIMARY KEY(`from_server`, `id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fromServer",
+            "columnName": "from_server",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fromApp",
+            "columnName": "from_app",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "body",
+            "columnName": "body",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "actions",
+            "columnName": "actions",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expiresAt",
+            "columnName": "expires_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "openPath",
+            "columnName": "open_path",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isRead",
+            "columnName": "is_read",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isResponded",
+            "columnName": "is_responded",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "respondedActionId",
+            "columnName": "responded_action_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "respondedText",
+            "columnName": "responded_text",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "respondedAt",
+            "columnName": "responded_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "revision",
+            "columnName": "revision",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'0'"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "from_server",
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_notifications_from_server",
+            "unique": false,
+            "columnNames": [
+              "from_server"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_from_server` ON `${TABLE_NAME}` (`from_server`)"
+          },
+          {
+            "name": "index_notifications_from_app",
+            "unique": false,
+            "columnNames": [
+              "from_app"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_from_app` ON `${TABLE_NAME}` (`from_app`)"
+          },
+          {
+            "name": "index_notifications_created_at",
+            "unique": false,
+            "columnNames": [
+              "created_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_created_at` ON `${TABLE_NAME}` (`created_at`)"
+          },
+          {
+            "name": "index_notifications_is_read",
+            "unique": false,
+            "columnNames": [
+              "is_read"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_is_read` ON `${TABLE_NAME}` (`is_read`)"
+          },
+          {
+            "name": "index_notifications_is_responded",
+            "unique": false,
+            "columnNames": [
+              "is_responded"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_is_responded` ON `${TABLE_NAME}` (`is_responded`)"
+          }
+        ]
+      },
+      {
+        "tableName": "servers",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`connection_id` TEXT NOT NULL, `server_id` TEXT NOT NULL, `display_name` TEXT NOT NULL, `base_url` TEXT NOT NULL, `account_identity` TEXT, `encrypted_auth_token` TEXT, `color_hex` INTEGER NOT NULL, `is_enabled` INTEGER NOT NULL, `connection_status` TEXT NOT NULL, `last_sync_time` INTEGER NOT NULL, `vapid_public_key` TEXT, `contract_version` TEXT, `identity_scope` TEXT, `identity_subject` TEXT, `last_error_code` TEXT, `inbox_cursor` TEXT NOT NULL DEFAULT '0', `installation_id` TEXT, `subscription_version` INTEGER, `subscription_status` TEXT, `connector_package` TEXT, `up_distributor` TEXT, `up_endpoint` TEXT, `up_status` TEXT NOT NULL, PRIMARY KEY(`connection_id`))",
+        "fields": [
+          {
+            "fieldPath": "connectionId",
+            "columnName": "connection_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "serverId",
+            "columnName": "server_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "display_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseUrl",
+            "columnName": "base_url",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "accountIdentity",
+            "columnName": "account_identity",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "encryptedAuthToken",
+            "columnName": "encrypted_auth_token",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "colorHex",
+            "columnName": "color_hex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isEnabled",
+            "columnName": "is_enabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "connectionStatus",
+            "columnName": "connection_status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSyncTime",
+            "columnName": "last_sync_time",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "vapidPublicKey",
+            "columnName": "vapid_public_key",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "contractVersion",
+            "columnName": "contract_version",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "identityScope",
+            "columnName": "identity_scope",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "identitySubject",
+            "columnName": "identity_subject",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastErrorCode",
+            "columnName": "last_error_code",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "inboxCursor",
+            "columnName": "inbox_cursor",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'0'"
+          },
+          {
+            "fieldPath": "installationId",
+            "columnName": "installation_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "subscriptionVersion",
+            "columnName": "subscription_version",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "subscriptionStatus",
+            "columnName": "subscription_status",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "connectorPackage",
+            "columnName": "connector_package",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "upDistributor",
+            "columnName": "up_distributor",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "upEndpoint",
+            "columnName": "up_endpoint",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "upStatus",
+            "columnName": "up_status",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "connection_id"
+          ]
+        }
+      },
+      {
+        "tableName": "outbox_responses",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`response_id` TEXT NOT NULL, `notification_id` INTEGER NOT NULL, `from_server` TEXT NOT NULL, `action_id` TEXT NOT NULL, `action_label` TEXT NOT NULL, `action_kind` TEXT NOT NULL, `reply_text` TEXT, `connection_id` TEXT NOT NULL, `account_identity` TEXT, `notification_title` TEXT NOT NULL, `from_app` TEXT NOT NULL, `status` TEXT NOT NULL, `is_simulated` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `error_message` TEXT, `receipt_response_id` TEXT, `receipt_accepted_at` INTEGER, `attempt_count` INTEGER NOT NULL DEFAULT 0, `next_attempt_at` INTEGER, `terminal_error_code` TEXT, PRIMARY KEY(`response_id`))",
+        "fields": [
+          {
+            "fieldPath": "responseId",
+            "columnName": "response_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notificationId",
+            "columnName": "notification_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fromServer",
+            "columnName": "from_server",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "actionId",
+            "columnName": "action_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "actionLabel",
+            "columnName": "action_label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "actionKind",
+            "columnName": "action_kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "replyText",
+            "columnName": "reply_text",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "connectionId",
+            "columnName": "connection_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "accountIdentity",
+            "columnName": "account_identity",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "notificationTitle",
+            "columnName": "notification_title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fromApp",
+            "columnName": "from_app",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSimulated",
+            "columnName": "is_simulated",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "errorMessage",
+            "columnName": "error_message",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "receiptResponseId",
+            "columnName": "receipt_response_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "receiptAcceptedAt",
+            "columnName": "receipt_accepted_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "attemptCount",
+            "columnName": "attempt_count",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "nextAttemptAt",
+            "columnName": "next_attempt_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "terminalErrorCode",
+            "columnName": "terminal_error_code",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "response_id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3445b9fead32ee15ff98bac26bb1fed0')"
+    ]
+  }
+}

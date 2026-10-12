@@ -71,12 +71,6 @@ data class ServerEntity(
     @ColumnInfo(name = "subscription_status")
     val subscriptionStatus: String? = null, // "pending" | "active" | "deleted"
 
-    @ColumnInfo(name = "subscription_p256dh")
-    val subscriptionP256dh: String? = null, // base64url uncompressed P-256 key
-
-    @ColumnInfo(name = "subscription_auth")
-    val subscriptionAuth: String? = null, // base64url 16-byte auth secret
-
     @ColumnInfo(name = "connector_package")
     val connectorPackage: String? = null, // UnifiedPush distributor package name
 

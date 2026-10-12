@@ -98,7 +98,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     notificationTitle = title,
                     fromApp = fromApp,
                     status = OutboxStatus.QUEUED,
-                    isSimulated = true, // Labelled as Simulated for demo pipeline
+                    isSimulated = false,
                     createdAt = now,
                     updatedAt = now
                 )

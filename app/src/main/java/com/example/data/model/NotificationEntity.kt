@@ -45,7 +45,10 @@ data class NotificationEntity(
     @ColumnInfo(name = "responded_text")
     val respondedText: String? = null,
     @ColumnInfo(name = "responded_at")
-    val respondedAt: Long? = null
+    val respondedAt: Long? = null,
+
+    @ColumnInfo(name = "revision", defaultValue = "0")
+    val revision: String = "0" // decimal string, monotonic per notification; never compared as a number
 ) {
     val isExpired: Boolean
         get() = expiresAt != null && expiresAt < System.currentTimeMillis()

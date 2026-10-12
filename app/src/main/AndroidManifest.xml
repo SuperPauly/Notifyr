@@ -23,6 +23,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
+        <receiver
+            android:name="org.unifiedpush.android.connector.internal.MessagingReceiverImpl"
+            tools:node="remove" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -40,17 +43,13 @@
             android:name=".ui.notifications.NotificationActionReceiver"
             android:exported="false" />
 
-        <!-- Exported receiver for UnifiedPush distributor events -->
-        <receiver
-            android:name=".data.unifiedpush.UnifiedPushReceiver"
-            android:exported="true">
+        <service
+            android:name=".data.unifiedpush.NotifyrPushService"
+            android:exported="false">
             <intent-filter>
-                <action android:name="org.unifiedpush.android.connector.NEW_ENDPOINT" />
-                <action android:name="org.unifiedpush.android.connector.UNREGISTERED" />
-                <action android:name="org.unifiedpush.android.connector.REGISTRATION_FAILED" />
-                <action android:name="org.unifiedpush.android.connector.MESSAGE" />
+                <action android:name="org.unifiedpush.android.connector.PUSH_EVENT" />
             </intent-filter>
-        </receiver>
+        </service>
     </application>
 
 </manifest>

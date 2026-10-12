@@ -111,6 +111,16 @@ class KeystoreManager {
         }
     }
 
+    fun encryptBytes(value: ByteArray): String? = encrypt(Base64.encodeToString(value, Base64.NO_WRAP))
+
+    fun decryptBytes(value: String?): ByteArray? = decrypt(value)?.let { encoded ->
+        try {
+            Base64.decode(encoded, Base64.NO_WRAP)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+    }
+
     companion object {
         private const val ANDROID_KEY_STORE = "AndroidKeyStore"
         private const val KEY_ALIAS = "notifyr_master_credentials_key"

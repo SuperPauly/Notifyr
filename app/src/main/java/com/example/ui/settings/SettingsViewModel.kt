@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.data.repository.InboxRepository
 import com.example.data.repository.NotificationRepository
 import com.example.data.repository.PreferencesRepository
 import com.example.data.repository.ServerRepository
@@ -29,7 +30,8 @@ class SettingsViewModel(
     private val preferencesRepository: PreferencesRepository,
     private val notificationRepository: NotificationRepository,
     private val serverRepository: ServerRepository,
-    private val unifiedPushManager: UnifiedPushManager
+    private val unifiedPushManager: UnifiedPushManager,
+    private val inboxRepository: InboxRepository
 ) : ViewModel() {
 
     private val _statusMessage = MutableStateFlow<String?>(null)
@@ -92,17 +94,28 @@ class SettingsViewModel(
                 return@launch
             }
 
+            val now = java.time.Instant.now().toString()
             val sampleJson = """
                 {
-                    "id": ${System.currentTimeMillis()},
-                    "created_at": ${System.currentTimeMillis()},
-                    "from_app": "k8s-autoscale",
-                    "title": "UnifiedPush: HPA Scaled Deployment",
-                    "body": "Ingest stream delivered through distributor protocol to connection '${firstServer.connectionId.take(8)}'.",
-                    "actions": [
-                        {"id": "ack_scale", "label": "Acknowledge", "kind": "BUTTON"},
-                        {"id": "reply_scale", "label": "Scale Note", "kind": "TEXT_REPLY"}
-                    ]
+                    "version": 1,
+                    "kind": "notification",
+                    "revision": "1",
+                    "from_server": "${firstServer.serverId}",
+                    "state": {
+                        "responded": false,
+                        "notification": {
+                            "id": "${System.currentTimeMillis()}",
+                            "created_at": "$now",
+                            "from_app": "k8s-autoscale",
+                            "from_server": "${firstServer.serverId}",
+                            "title": "UnifiedPush: HPA Scaled Deployment",
+                            "body": "Ingest stream delivered through distributor protocol to connection '${firstServer.connectionId.take(8)}'.",
+                            "actions": [
+                                {"id": "ack_scale", "label": "Acknowledge", "kind": "BUTTON"},
+                                {"id": "reply_scale", "label": "Scale Note", "kind": "TEXT_REPLY"}
+                            ]
+                        }
+                    }
                 }
             """.trimIndent()
 
@@ -112,11 +125,20 @@ class SettingsViewModel(
                 server = firstServer
             )
 
-            if (decoded != null) {
-                notificationRepository.processIncomingNotification(context, decoded, shouldAlert = true)
-                _statusMessage.value = "Simulated UnifiedPush alert posted to notification shade"
-            } else {
-                _statusMessage.value = "Failed to decode push payload"
+            when (decoded) {
+                is com.example.data.unifiedpush.DecodeResult.Notification -> {
+                    inboxRepository.applyInlineNotification(decoded)
+                    _statusMessage.value = "Simulated UnifiedPush alert posted to notification shade"
+                }
+
+                is com.example.data.unifiedpush.DecodeResult.RegistrationChallenge -> {
+                    unifiedPushManager.handleRegistrationChallenge(firstServer, decoded)
+                    _statusMessage.value = "Simulated registration challenge handled"
+                }
+
+                else -> {
+                    _statusMessage.value = "Failed to decode push payload"
+                }
             }
         }
     }
@@ -136,7 +158,8 @@ class SettingsViewModel(
         private val preferencesRepository: PreferencesRepository,
         private val notificationRepository: NotificationRepository,
         private val serverRepository: ServerRepository,
-        private val unifiedPushManager: UnifiedPushManager
+        private val unifiedPushManager: UnifiedPushManager,
+        private val inboxRepository: InboxRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -144,7 +167,8 @@ class SettingsViewModel(
                 preferencesRepository,
                 notificationRepository,
                 serverRepository,
-                unifiedPushManager
+                unifiedPushManager,
+                inboxRepository
             ) as T
         }
     }

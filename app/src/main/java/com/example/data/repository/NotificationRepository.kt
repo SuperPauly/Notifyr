@@ -9,7 +9,8 @@ import kotlinx.coroutines.flow.Flow
 
 class NotificationRepository(
     private val notificationDao: NotificationDao,
-    private val serverDao: ServerDao
+    private val serverDao: ServerDao,
+    private val inboxRepository: InboxRepository? = null
 ) {
     val allNotifications: Flow<List<NotificationEntity>> = notificationDao.getAllNotifications()
     val unreadCount: Flow<Int> = notificationDao.countUnread()
@@ -24,10 +25,14 @@ class NotificationRepository(
     }
 
     /**
-     * Re-fetches or synchronizes the notification list.
+     * Pull-to-refresh and startup reconciliation: pages the v2 inbox for every enabled
+     * connection. No-ops when no inbox transport is wired (unit tests, previews).
      */
     suspend fun refreshNotifications() {
-        kotlinx.coroutines.delay(400)
+        val delegate = inboxRepository ?: return
+        for (server in serverDao.getEnabledServersDirect()) {
+            runCatching { delegate.refresh(server) }
+        }
     }
 
     /**

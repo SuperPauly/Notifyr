@@ -219,7 +219,7 @@ fun OutboxResponseCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                OutboxStatusPill(status = response.status, label = response.displayStatus)
+                OutboxStatusPill(status = response.status, label = response.displayStatus())
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -227,16 +227,18 @@ fun OutboxResponseCard(
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    IconButton(
-                        onClick = { if (response.deleteRequiresConfirmation) confirmDelete = true else onDelete() },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Delete,
-                            contentDescription = "Delete outbox entry",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    if (!response.isAccepted) {
+                        IconButton(
+                            onClick = { if (response.deleteRequiresConfirmation) confirmDelete = true else onDelete() },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Delete outbox entry",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

@@ -37,8 +37,7 @@ fun OutboxEntity.isRetryPending(now: Long): Boolean {
         nextAttemptAt > now
 }
 
-val OutboxEntity.displayStatus: String
-    get() = if (status == OutboxStatus.FAILED && nextAttemptAt != null) {
+fun OutboxEntity.displayStatus(now: Long = System.currentTimeMillis()): String = if (isRetryPending(now)) {
         "Retrying"
     } else {
         status.displayLabel

@@ -9,6 +9,7 @@ import com.example.data.model.ActionKind
 import com.example.data.model.NotificationEntity
 import com.example.data.model.OutboxEntity
 import com.example.data.model.OutboxStatus
+import com.example.data.response.ResponseValidator
 import com.example.data.worker.OutboxSyncWorker
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
@@ -87,12 +88,7 @@ class OutboxRepository(
 
     suspend fun retryResponse(responseId: String) {
         val item = outboxDao.getResponseById(responseId) ?: return
-        outboxDao.updateStatus(
-            responseId = item.responseId,
-            status = OutboxStatus.QUEUED,
-            updatedAt = System.currentTimeMillis(),
-            errorMessage = null
-        )
+        outboxDao.requeue(item.responseId, System.currentTimeMillis())
         OutboxSyncWorker.enqueue(context)
     }
 

@@ -20,7 +20,7 @@ class DemoNotificationTransport : NotificationDeliveryTransport, NotificationRes
             displayName = "US-East Production Cloud",
             baseUrl = "https://notifyr-gateway.us-east.prod.internal",
             accountIdentity = "alex.ops@company.io",
-            encryptedAuthToken = com.example.data.security.KeystoreManager().encrypt("tok_prod_sec_9941a87e2b"),
+            encryptedAuthToken = com.example.data.security.KeystoreManager().encrypt("demo-token-us-east"),
             colorHex = 0xFF4F46E5, // Indigo
             isEnabled = true,
             connectionStatus = ConnectionStatus.CONNECTED
@@ -31,7 +31,7 @@ class DemoNotificationTransport : NotificationDeliveryTransport, NotificationRes
             displayName = "EU-West Staging & CI/CD",
             baseUrl = "https://notifyr.eu-west.staging.cloud",
             accountIdentity = "ci.automation@company.io",
-            encryptedAuthToken = com.example.data.security.KeystoreManager().encrypt("tok_stg_dev_33890c21"),
+            encryptedAuthToken = com.example.data.security.KeystoreManager().encrypt("demo-token-eu-west"),
             colorHex = 0xFF059669, // Emerald
             isEnabled = true,
             connectionStatus = ConnectionStatus.CONNECTED

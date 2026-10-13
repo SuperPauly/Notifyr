@@ -129,8 +129,6 @@ class NotifyrPushService : PushService() {
         serverDao.updateSubscriptionState(
             connectionId = instance,
             installationId = installationId,
-            p256dh = pubKey,
-            auth = auth,
             distributor = server.connectorPackage ?: server.upDistributor.orEmpty(),
             endpoint = endpoint,
             version = status?.version ?: server.subscriptionVersion,

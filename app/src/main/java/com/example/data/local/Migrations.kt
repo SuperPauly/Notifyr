@@ -38,3 +38,52 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("ALTER TABLE outbox_responses ADD COLUMN terminal_error_code TEXT")
     }
 }
+
+/**
+ * v2 -> v3: removes plaintext subscription key columns `subscription_p256dh` and `subscription_auth`
+ * from `servers` table. KeyMaterialStore now encrypts these in SharedPreferences via Android Keystore.
+ * Requires table rebuild; existing plaintext values are discarded (re-registration required).
+ */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE servers_new (
+                connection_id TEXT PRIMARY KEY NOT NULL,
+                server_id TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                endpoint TEXT NOT NULL,
+                bearer_token TEXT NOT NULL,
+                is_enabled INTEGER NOT NULL DEFAULT 1,
+                last_sync_time INTEGER NOT NULL DEFAULT 0,
+                connection_status TEXT NOT NULL DEFAULT 'unknown',
+                vapid_public_key TEXT,
+                contract_version TEXT,
+                identity_scope TEXT,
+                identity_subject TEXT,
+                last_error_code TEXT,
+                inbox_cursor TEXT NOT NULL DEFAULT '0',
+                installation_id TEXT,
+                subscription_version INTEGER,
+                subscription_status TEXT,
+                connector_package TEXT,
+                up_distributor TEXT,
+                up_endpoint TEXT,
+                up_status TEXT NOT NULL DEFAULT 'Not Registered'
+            )
+        """.trimIndent())
+
+        db.execSQL("""
+            INSERT INTO servers_new SELECT
+                connection_id, server_id, display_name, endpoint, bearer_token,
+                is_enabled, last_sync_time, connection_status,
+                vapid_public_key, contract_version, identity_scope, identity_subject,
+                last_error_code, inbox_cursor, installation_id,
+                subscription_version, subscription_status, connector_package,
+                up_distributor, up_endpoint, up_status
+            FROM servers
+        """.trimIndent())
+
+        db.execSQL("DROP TABLE servers")
+        db.execSQL("ALTER TABLE servers_new RENAME TO servers")
+    }
+}

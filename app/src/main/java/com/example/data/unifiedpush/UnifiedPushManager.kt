@@ -40,7 +40,10 @@ class UnifiedPushManager(
     }
 
     /** Unregisters the server's connector instance from its saved distributor. */
-    fun unregister(server: ServerEntity) {
+    suspend fun unregister(server: ServerEntity) {
+        // Server-first deletion: call DELETE /v1/subscriptions before connector unregister
+        inboxTransport?.deleteSubscription(server)
+        
         UnifiedPush.unregister(context, server.connectionId)
         KeyMaterialStore(context).clearKeyMaterial(server.connectionId)
     }

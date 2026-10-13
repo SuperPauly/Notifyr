@@ -50,6 +50,8 @@ class InboxEngineTest {
     private class FakeTransport(private val pages: ArrayDeque<InboxPageResult>) : InboxTransport {
         val requestedCursors = mutableListOf<String>()
 
+        override suspend fun deleteSubscription(server: ServerEntity) = false
+
         override suspend fun fetchInboxPage(
             server: ServerEntity,
             cursor: String,

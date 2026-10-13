@@ -170,10 +170,10 @@ class DemoNotificationTransport : NotificationDeliveryTransport, NotificationRes
         }
     }
 
-    override suspend fun deliverResponse(server: ServerEntity, response: OutboxEntity): Result<Unit> {
+    override suspend fun deliverResponse(server: ServerEntity, response: OutboxEntity): Result<com.example.data.remote.model.ResponseReceiptDto?> {
         // Simulate remote response dispatch
         delay(600)
-        return Result.success(Unit)
+        return Result.success(null)
     }
 
     fun generateSimulatedNotification(server: ServerEntity): NotificationEntity {

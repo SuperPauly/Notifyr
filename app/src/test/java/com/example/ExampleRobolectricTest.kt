@@ -360,7 +360,7 @@ class ExampleRobolectricTest {
 
         val queuedItem = db.outboxDao().getResponseById(responseId!!)
         assertNotNull(queuedItem)
-        assertTrue(queuedItem!!.isSimulated) // Demo response clearly labelled as simulated
+        assertFalse(queuedItem!!.isSimulated) // Real responses not simulated
         assertEquals(OutboxStatus.QUEUED, queuedItem.status)
 
         // Simulate transport delivery

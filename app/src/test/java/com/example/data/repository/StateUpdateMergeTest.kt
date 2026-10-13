@@ -51,6 +51,8 @@ class StateUpdateMergeTest {
     }
 
     private class NoopTransport : InboxTransport {
+        override suspend fun deleteSubscription(server: ServerEntity) = false
+
         override suspend fun fetchInboxPage(server: ServerEntity, cursor: String, limit: Int) =
             InboxPageResult(page = null, invalidCursor = false)
 

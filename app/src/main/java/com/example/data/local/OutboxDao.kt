@@ -122,6 +122,16 @@ interface OutboxDao {
         now: Long
     )
 
+    @Query(
+        """
+        UPDATE outbox_responses
+        SET terminal_error_code = :errorCode,
+            updated_at = :now
+        WHERE response_id = :responseId
+        """
+    )
+    suspend fun setTerminalError(responseId: String, errorCode: String, now: Long = System.currentTimeMillis())
+
     @Query("SELECT attempt_count FROM outbox_responses WHERE response_id = :responseId")
     suspend fun getAttemptCount(responseId: String): Int?
 

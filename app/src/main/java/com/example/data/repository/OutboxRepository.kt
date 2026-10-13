@@ -62,7 +62,7 @@ class OutboxRepository(
             notificationTitle = notification.title,
             fromApp = notification.fromApp,
             status = OutboxStatus.QUEUED,
-            isSimulated = true, // Demo responses labelled "Simulated"
+            isSimulated = false,
             createdAt = now,
             updatedAt = now
         )

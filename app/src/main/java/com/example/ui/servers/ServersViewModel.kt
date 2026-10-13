@@ -10,9 +10,11 @@ import com.example.data.unifiedpush.UnifiedPushManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import java.util.UUID
 
 data class ServersUiState(
@@ -137,8 +139,8 @@ class ServersViewModel(
     }
 
     fun unregisterUnifiedPush(server: ServerEntity) {
-        unifiedPushManager.unregister(server)
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            unifiedPushManager.unregister(server)
             serverRepository.updateServer(
                 server.copy(
                     upDistributor = null,

@@ -8,5 +8,5 @@ import com.example.data.model.ServerEntity
  * back to the respective server.
  */
 interface NotificationResponseTransport {
-    suspend fun deliverResponse(server: ServerEntity, response: OutboxEntity): Result<Unit>
+    suspend fun deliverResponse(server: ServerEntity, response: OutboxEntity): Result<com.example.data.remote.model.ResponseReceiptDto?>
 }

@@ -82,5 +82,5 @@ data class ServerEntity(
     val upEndpoint: String? = null, // Push gateway endpoint URL
 
     @ColumnInfo(name = "up_status")
-    val upStatus: String = "Not Registered" // e.g. "Registered with distributor (Awaiting server integration)"
+    val upStatus: String = "Not Registered"
 )

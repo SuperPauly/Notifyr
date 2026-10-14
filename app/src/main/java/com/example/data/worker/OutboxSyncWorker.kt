@@ -9,9 +9,6 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.example.NotifyrApplication
-import com.example.data.model.OutboxStatus
-import com.example.data.response.ErrorClassifier
-import com.example.data.transport.ResponseDeliveryException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -22,112 +19,14 @@ class OutboxSyncWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val app = applicationContext as? NotifyrApplication ?: return@withContext Result.failure()
-        val outboxDao = app.database.outboxDao()
-        val serverDao = app.database.serverDao()
-        val transport = app.responseTransport
 
-        val pending = outboxDao.getPendingResponses()
-        if (pending.isEmpty()) {
-            return@withContext Result.success()
-        }
+        val engine = OutboxSyncEngine(
+            outboxDao = app.database.outboxDao(),
+            serverDao = app.database.serverDao(),
+            transport = app.responseTransport
+        )
 
-        var anyFailed = false
-
-        for (item in pending) {
-            val now = System.currentTimeMillis()
-            
-            if (item.nextAttemptAt != null && item.nextAttemptAt > now) {
-                continue
-            }
-
-            outboxDao.updateStatus(item.responseId, OutboxStatus.SENDING, now)
-
-            val server = serverDao.getServerByConnectionIdDirect(item.connectionId)
-                ?: serverDao.getServerByServerIdDirect(item.fromServer)
-
-            if (server == null) {
-                outboxDao.updateStatus(
-                    responseId = item.responseId,
-                    status = OutboxStatus.FAILED,
-                    updatedAt = System.currentTimeMillis(),
-                    errorMessage = "Server profile for '${item.fromServer}' was removed or unconfigured"
-                )
-                anyFailed = true
-                continue
-            }
-
-            if (!server.isEnabled) {
-                outboxDao.updateStatus(
-                    responseId = item.responseId,
-                    status = OutboxStatus.AUTH_REQUIRED,
-                    updatedAt = System.currentTimeMillis(),
-                    errorMessage = "Server connection is disabled"
-                )
-                anyFailed = true
-                continue
-            }
-
-            val deliveryResult = transport.deliverResponse(server, item)
-            if (deliveryResult.isSuccess) {
-                val receipt = deliveryResult.getOrNull()
-                if (item.isSimulated) {
-                    outboxDao.updateStatus(
-                        responseId = item.responseId,
-                        status = OutboxStatus.SIMULATED,
-                        updatedAt = now,
-                        errorMessage = null
-                    )
-                } else if (receipt != null) {
-                    outboxDao.recordReceipt(
-                        responseId = item.responseId,
-                        receiptResponseId = receipt.responseId,
-                        receiptAcceptedAt = java.time.Instant.parse(receipt.acceptedAt).toEpochMilli(),
-                        now = now
-                    )
-                } else {
-                    outboxDao.updateStatus(
-                        responseId = item.responseId,
-                        status = OutboxStatus.SENT,
-                        updatedAt = now,
-                        errorMessage = null
-                    )
-                }
-            } else {
-                val exception = deliveryResult.exceptionOrNull()
-                val deliveryException = exception as? ResponseDeliveryException
-                val httpCode = deliveryException?.code ?: 0
-                val classification = ErrorClassifier.classify(httpCode, deliveryException?.response)
-
-                if (classification.isTerminal) {
-                    outboxDao.updateStatus(
-                        responseId = item.responseId,
-                        status = OutboxStatus.FAILED,
-                        updatedAt = System.currentTimeMillis(),
-                        errorMessage = exception?.message ?: "Transmission rejected"
-                    )
-                    outboxDao.setTerminalError(item.responseId, classification.errorCode ?: "unknown", now)
-                } else if (classification.isRetryable) {
-                    val attemptCount = (item.attemptCount ?: 0) + 1
-                    val backoffMs = ErrorClassifier.calculateBackoff(attemptCount, classification.retryAfterMs)
-                    val nextAttempt = now + backoffMs
-
-                    outboxDao.scheduleRetry(
-                        responseId = item.responseId,
-                        attemptCount = attemptCount,
-                        nextAttemptAt = nextAttempt,
-                        errorMessage = exception?.message,
-                        now = now
-                    )
-                    anyFailed = true
-                }
-            }
-        }
-
-        if (anyFailed) {
-            Result.retry()
-        } else {
-            Result.success()
-        }
+        if (engine.runOnce()) Result.retry() else Result.success()
     }
 
     companion object {

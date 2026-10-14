@@ -19,7 +19,14 @@ interface OutboxDao {
     @Query("SELECT * FROM outbox_responses WHERE status = :status ORDER BY created_at ASC")
     fun getResponsesByStatus(status: OutboxStatus): Flow<List<OutboxEntity>>
 
-    @Query("SELECT * FROM outbox_responses WHERE status = 'QUEUED' OR status = 'FAILED' ORDER BY created_at ASC")
+    @Query(
+        """
+        SELECT * FROM outbox_responses
+        WHERE (status = 'QUEUED' OR status = 'FAILED')
+          AND terminal_error_code IS NULL
+        ORDER BY created_at ASC
+        """
+    )
     suspend fun getPendingResponses(): List<OutboxEntity>
 
     /** Pending rows whose retry window has opened; [now] is epoch millis, null nextAttemptAt is eligible. */
@@ -27,6 +34,7 @@ interface OutboxDao {
         """
         SELECT * FROM outbox_responses
         WHERE status IN ('QUEUED', 'FAILED')
+          AND terminal_error_code IS NULL
           AND (next_attempt_at IS NULL OR next_attempt_at <= :now)
         ORDER BY created_at ASC
         """
@@ -131,6 +139,19 @@ interface OutboxDao {
         """
     )
     suspend fun setTerminalError(responseId: String, errorCode: String, now: Long = System.currentTimeMillis())
+
+    @Query(
+        """
+        UPDATE outbox_responses
+        SET status = 'QUEUED',
+            error_message = NULL,
+            terminal_error_code = NULL,
+            next_attempt_at = NULL,
+            updated_at = :now
+        WHERE response_id = :responseId
+        """
+    )
+    suspend fun requeue(responseId: String, now: Long)
 
     @Query("SELECT attempt_count FROM outbox_responses WHERE response_id = :responseId")
     suspend fun getAttemptCount(responseId: String): Int?

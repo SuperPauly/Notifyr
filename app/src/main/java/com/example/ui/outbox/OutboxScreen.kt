@@ -31,6 +31,7 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -44,7 +45,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +63,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.ActionKind
 import com.example.data.model.OutboxEntity
 import com.example.data.model.OutboxStatus
+import com.example.data.model.canManuallyRetry
+import com.example.data.model.deleteRequiresConfirmation
+import com.example.data.model.displayStatus
+import com.example.data.model.isAccepted
+import com.example.data.model.isRetryPending
 import com.example.ui.components.AppChip
 import com.example.ui.components.DateTimeUtils
 import com.example.ui.components.EmptyStateView
@@ -191,6 +199,7 @@ fun OutboxResponseCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var confirmDelete by remember { mutableStateOf(false) }
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -210,7 +219,7 @@ fun OutboxResponseCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                OutboxStatusPill(status = response.status)
+                OutboxStatusPill(status = response.status, label = response.displayStatus())
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -218,15 +227,40 @@ fun OutboxResponseCard(
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Outlined.Delete,
-                            contentDescription = "Delete outbox entry",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    if (!response.isAccepted) {
+                        IconButton(
+                            onClick = { if (response.deleteRequiresConfirmation) confirmDelete = true else onDelete() },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = "Delete outbox entry",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
+            }
+
+            if (response.isAccepted) {
+                Text(
+                    text = "Receipt: ${response.receiptResponseId}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else if (response.isRetryPending(System.currentTimeMillis())) {
+                Text(
+                    text = "Retry scheduled for ${DateTimeUtils.formatRelative(response.nextAttemptAt ?: 0L)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            } else if (response.terminalErrorCode != null) {
+                Text(
+                    text = "Terminal error: ${response.terminalErrorCode}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -334,20 +368,32 @@ fun OutboxResponseCard(
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.weight(1f)
                     )
-                    OutlinedButton(
-                        onClick = onRetry,
-                        modifier = Modifier.testTag("retry_outbox_${response.responseId}")
-                    ) {
-                        Text("Retry", style = MaterialTheme.typography.labelSmall)
+                    if (response.canManuallyRetry(System.currentTimeMillis())) {
+                        OutlinedButton(
+                            onClick = onRetry,
+                            modifier = Modifier.testTag("retry_outbox_${response.responseId}")
+                        ) { Text("Retry", style = MaterialTheme.typography.labelSmall) }
                     }
                 }
             }
         }
     }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Delete queued response?") },
+            text = { Text("This response has no server receipt and cannot be recovered after deletion.") },
+            confirmButton = {
+                OutlinedButton(onClick = { confirmDelete = false; onDelete() }) { Text("Delete") }
+            },
+            dismissButton = { OutlinedButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+        )
+    }
 }
 
 @Composable
-fun OutboxStatusPill(status: OutboxStatus, modifier: Modifier = Modifier) {
+fun OutboxStatusPill(status: OutboxStatus, label: String = status.name, modifier: Modifier = Modifier) {
     val (bgColor, textColor, icon) = when (status) {
         OutboxStatus.QUEUED -> Triple(
             Color(0xFFFEF3C7),
@@ -396,7 +442,7 @@ fun OutboxStatusPill(status: OutboxStatus, modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.width(5.dp))
         Text(
-            text = status.name,
+            text = label,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp

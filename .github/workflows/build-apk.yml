@@ -44,28 +44,22 @@ jobs:
       - name: Setup Gradle Build Environment
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Configure Keystore for Release Build
+      - name: Require Release Signing Secrets
         if: ${{ inputs.build_variant == 'release' }}
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ ! -f "my-upload-key.jks" ] && [ -z "$KEYSTORE_PATH" ]; then
-            echo "Provisioning CI keystore for release packaging..."
-            keytool -genkeypair -v \
-              -keystore my-upload-key.jks \
-              -alias upload \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass "${STORE_PASSWORD:-android}" \
-              -keypass "${KEY_PASSWORD:-android}" \
-              -dname "CN=Notifyr, OU=Release, O=Notifyr, L=Mountain View, ST=CA, C=US"
-            
-            if [ -z "$STORE_PASSWORD" ]; then
-              echo "STORE_PASSWORD=android" >> $GITHUB_ENV
-            fi
-            if [ -z "$KEY_PASSWORD" ]; then
-              echo "KEY_PASSWORD=android" >> $GITHUB_ENV
-            fi
-          fi
+          test -n "$RELEASE_KEYSTORE_BASE64" || { echo "Missing RELEASE_KEYSTORE_BASE64 secret" >&2; exit 1; }
+          test -n "$STORE_PASSWORD" || { echo "Missing STORE_PASSWORD secret" >&2; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "Missing KEY_PASSWORD secret" >&2; exit 1; }
+          keystore_path="$RUNNER_TEMP/notifyr-release.jks"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          test -s "$keystore_path" || { echo "Decoded release keystore is empty" >&2; exit 1; }
+          echo "KEYSTORE_PATH=$keystore_path" >> "$GITHUB_ENV"
+          echo "STORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
 
       - name: Build Debug APK
         if: ${{ inputs.build_variant == 'debug' || inputs.build_variant == '' }}

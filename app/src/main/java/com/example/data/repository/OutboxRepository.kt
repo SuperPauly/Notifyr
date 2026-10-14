@@ -5,10 +5,10 @@ import com.example.data.local.NotificationDao
 import com.example.data.local.OutboxDao
 import com.example.data.local.ServerDao
 import com.example.data.model.ActionItem
-import com.example.data.model.ActionKind
 import com.example.data.model.NotificationEntity
 import com.example.data.model.OutboxEntity
 import com.example.data.model.OutboxStatus
+import com.example.data.response.ResponseSerializer
 import com.example.data.response.ResponseValidator
 import com.example.data.worker.OutboxSyncWorker
 import kotlinx.coroutines.flow.Flow
@@ -34,14 +34,16 @@ class OutboxRepository(
             return null
         }
 
-        // Button actions omit text. Text replies require non-blank text.
-        val sanitizedText = if (action.kind == ActionKind.TEXT_REPLY) {
-            val trimmed = replyText?.trim()
-            if (trimmed.isNullOrBlank()) return null
-            trimmed
-        } else {
-            null
+        val validActionIds = notification.actions.mapTo(mutableSetOf()) { it.id }
+        if (!ResponseValidator.validateActionId(action.id, validActionIds)) {
+            return null
         }
+
+        // Reuse the delivery wire rules so a queued reply can never fail serialization later:
+        // TEXT_REPLY needs non-blank text within 4096 UTF-8 bytes; BUTTON omits text.
+        val wireFormat = ResponseSerializer.serializeResponse(action.id, action.kind, replyText)
+            ?: return null
+        val sanitizedText = wireFormat["text"] as? String
 
         val server = serverDao.getServerByServerIdDirect(notification.fromServer)
         val connectionId = server?.connectionId ?: notification.fromServer

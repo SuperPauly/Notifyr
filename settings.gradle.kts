@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Notifyr"
+rootProject.name = "Notifyr-Android"
 
 include(":app")
